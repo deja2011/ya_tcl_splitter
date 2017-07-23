@@ -1,0 +1,4 @@
+/Users/lawrenceli/Workplace/tcl_splitter/test/source_1.rtlscr.tcl
+10 /Users/lawrenceli/Workplace/tcl_splitter/test/source_2.tcl
+/Users/lawrenceli/Workplace/tcl_splitter/test/source_1.cstr.tcl
+9 /Users/lawrenceli/Workplace/tcl_splitter/test/source_3.tcl

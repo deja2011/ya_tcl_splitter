@@ -1,0 +1,3 @@
+setup rtlscr 654 /Users/lawrenceli/Workplace/tcl_splitter/test/source_2.tcl
+rtlscr cstr 20 /Users/lawrenceli/Workplace/tcl_splitter/test/source_1.tcl
+cstr pcstr 199 /Users/lawrenceli/Workplace/tcl_splitter/test/source_3.tcl
