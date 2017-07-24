@@ -279,7 +279,7 @@ class Node(object):
         for _, child_node in left_node.childs:
             child_node.parent = left_node
         if left_child:
-            left_node.add_child_node(left_child, line_num-self.scope[0]+1)
+            left_node.add_child_node(left_child, line_num)
         # Implement right node, link right node and right child node.
         right_node = Node(orig_file=self.orig_file)
         right_node.stage = next_stage
