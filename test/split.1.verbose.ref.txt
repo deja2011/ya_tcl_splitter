@@ -1,0 +1,26 @@
+CONSTRAINT/scripts/source_1.rtlscr.tcl
+-> orig file : /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.tcl
+-> scope : [1, 20]
+-> first line : ORIG
+-> last line : SPLIT rtlscr cstr
+----------------
+  CONSTRAINT/scripts/source_2.tcl
+  -> sourced at : 10
+  -> orig file : /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_2.tcl
+  -> scope : [1, 674]
+  -> first line : ORIG
+  -> last line : ORIG
+----------------
+CONSTRAINT/scripts/source_1.cstr.tcl
+-> orig file : /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.tcl
+-> scope : [20, 32]
+-> first line : SPLIT rtlscr cstr
+-> last line : ORIG
+----------------
+  CONSTRAINT/scripts/source_3.tcl
+  -> sourced at : 9
+  -> orig file : /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_3.tcl
+  -> scope : [1, 801]
+  -> first line : ORIG
+  -> last line : ORIG
+----------------

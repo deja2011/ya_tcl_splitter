@@ -125,7 +125,6 @@ class Node(object):
     Data structure of a Tcl script.
     """
 
-
     def __init__(self, orig_file, parent=None, line_num=0):
         self.orig_file = orig_file
         if isfile(orig_file):
@@ -136,7 +135,9 @@ class Node(object):
         self.line_num = line_num
         self.childs = list()
         self._stage = None
-        self.target_dir = ""
+        self.target_dir = ''
+        self.first_line = "ORIG"
+        self.last_line = "ORIG"
 
 
     @property
@@ -168,7 +169,7 @@ class Node(object):
         else:
             target_file = self.orig_file
         if self.target_dir:
-            target_file = opjoin(target_dir, basename(target_file))
+            target_file = opjoin(self.target_dir, basename(target_file))
         return target_file
 
 
@@ -246,21 +247,53 @@ class Node(object):
             yield node
 
 
-    def export_source_tree(self, unit_indents=2, fout=sys.stdout):
+    def export_source_tree(self,
+                           unit_indents=2,
+                           fout=sys.stdout,
+                           verbose=False):
         """
         Show content of a node.
         """
         stack = [(-1, 0, self), ]
-        fout.write("{}\n".format(self.target_file))
+        if verbose:
+            fout.write("{target_file}\n"
+                       "-> orig file : {orig_file}\n"
+                       "-> scope : {scope}\n"
+                       "-> first line : {first_line}\n"
+                       "-> last line : {last_line}\n"
+                       "----------------\n".format(
+                           orig_file=self.orig_file,
+                           target_file=self.target_file,
+                           scope=self.scope,
+                           first_line=self.first_line,
+                           last_line=self.last_line))
+        else:
+            fout.write("{}\n".format(self.target_file))
         while stack:
             indents, line_num, node = stack.pop()
             stack.extend([(indents + 1, t[0], t[1])
                           for t in reversed(node.childs)])
             if indents == -1:
                 continue
-            fout.write("{}{} {}\n".format(" "*(unit_indents*indents),
-                                          line_num,
-                                          node.target_file))
+            if verbose:
+                fout.write("{indent}{target_file}\n"
+                           "{indent}-> sourced at : {line_num}\n"
+                           "{indent}-> orig file : {orig_file}\n"
+                           "{indent}-> scope : {scope}\n"
+                           "{indent}-> first line : {first_line}\n"
+                           "{indent}-> last line : {last_line}\n"
+                           "----------------\n".format(
+                               indent=" "*(unit_indents*(indents+1)),
+                               line_num=line_num,
+                               orig_file=node.orig_file,
+                               target_file=node.target_file,
+                               scope=node.scope,
+                               first_line=node.first_line,
+                               last_line=node.last_line))
+            else:
+                fout.write("{}{} {}\n".format(" "*(unit_indents*indents),
+                                              line_num,
+                                              node.target_file))
 
 
     def split_bot_up(self, last_stage, next_stage, line_num, left_child, right_child):
@@ -276,21 +309,31 @@ class Node(object):
         left_node.stage = last_stage
         left_node.scope = [self.scope[0], line_num]
         left_node.childs = [t for t in self.childs if t[0] < line_num]
+        left_node.first_line = self.first_line
         for _, child_node in left_node.childs:
             child_node.parent = left_node
         if left_child:
             left_node.add_child_node(left_child, line_num)
+            left_node.last_line = "SOURCE"
+        else:
+            left_node.last_line = "SPLIT {} {}".format(last_stage,
+                                                       next_stage)
         # Implement right node, link right node and right child node.
         right_node = Node(orig_file=self.orig_file)
         right_node.stage = next_stage
         right_node.scope = [line_num, self.scope[1]]
         right_node.childs = [(t[0] - (line_num - 1), t[1]) for t in self.childs
                              if t[0] > line_num]
+        right_node.last_line = self.last_line
         for _, child_node in right_node.childs:
             child_node.parent = right_node
             child_node.line_num -= (line_num - 1)
         if right_child:
             right_node.add_child_node(right_child, 1, prepend=True)
+            right_node.first_line = "SOURCE"
+        else:
+            right_node.first_line = "SPLIT {} {}".format(last_stage,
+                                                         next_stage)
         # Recursively split parent node unless current node is the top one.
         if self.parent:
             return self.parent.split_bot_up(last_stage=last_stage,
@@ -300,6 +343,21 @@ class Node(object):
                                             right_child=right_node)
         else:
             return self, left_node, right_node
+
+
+    def set_target_dir(self, mapping, output_dir):
+        """
+        :type mapping: dict<path : path>
+        ----
+        Set Node.target_dir according to selr.orig_file and mapping.
+        """
+        try:
+            self.target_dir = opjoin(output_dir,
+                                     mapping[dirname(self.orig_file)])
+        except KeyError:
+            raise KeyError("Cannot find entry for {} in mapping file.".format(
+                self.orig_file))
+
 
 
     # def split(self, last_stage, next_stage, line_num,
@@ -382,7 +440,7 @@ class Flow(object):
             self.mapping = self.load_mapping(mapping_file)
 
 
-    def iter_dfs(self):
+    def iter_dfs_all(self):
         """
         Loop over all top nodes and apply Node.iter_dfs on each of them.
         """
@@ -408,7 +466,7 @@ class Flow(object):
             raise ValueError("Invalid separator location: Separator in {} is"
                              "not supported because this script is sourced more"
                              "than once in the flow")
-        matching_nodes = [n for n in self.iter_dfs()
+        matching_nodes = [n for n in self.iter_dfs_all()
                           if n.orig_file == separator.file_name and
                           n.stage in (separator.last_stage, None)]
         node = matching_nodes[-1]
@@ -448,7 +506,7 @@ class Flow(object):
         """
         all_scripts = list()
         self.duplicates = list()
-        for node in self.iter_dfs():
+        for node in self.iter_dfs_all():
             if node.orig_file not in all_scripts:
                 all_scripts.append(node.orig_file)
             else:
@@ -460,27 +518,51 @@ class Flow(object):
         return self.duplicates
 
 
-    def build(self, output_dir):
+    def set_target_dir_all(self, output_dir):
         """
         :type output_dir: path
+        ----
+        Iterate over all top nodes and their child nodes, set their target_dir
+        according to orig_file, output_dir, and mapping.
         """
-        self.dedup()
-        for separator in self.separators:
-            self.split(separator)
-        # if isdir(output_dir):
-        #     raise OSError("Output directory {} already exists.".format(
-        #         output_dir))
-        # for node in self.iter_dfs():
-        #     if node.orig_file == "__VIRTUAL_TOP__":
-        #         continue
-        #     elif node.orig_file == self.root.childs[0][1].orig_file:
-        #         target_dir = opjoin(output_dir, 'CONSTRAINT')
-        #         is_top = True
-        #     else:
-        #         target_dir = opjoin(output_dir,
-        #                             self.mapping[dirname(node.orig_file)])
-        #         is_top = False
-        #     node.build(target_dir=target_dir, is_top=is_top)
+        for node in self.iter_dfs_all():
+            node.set_target_dir(mapping=self.mapping, output_dir=output_dir)
+
+
+    # def build(self, output_dir):
+    #     """
+    #     :type output_dir: path
+    #     """
+    #     if isdir(output_dir):
+    #         raise OSError("Output directory {} already exists.".format(
+    #             output_dir))
+    #     # for node in self.iter_dfs():
+    #     #     if node.orig_file == "__VIRTUAL_TOP__":
+    #     #         continue
+    #     #     elif node.orig_file == self.root.childs[0][1].orig_file:
+    #     #         target_dir = opjoin(output_dir, 'CONSTRAINT')
+    #     #         is_top = True
+    #     #     else:
+    #     #         target_dir = opjoin(output_dir,
+    #     #                             self.mapping[dirname(node.orig_file)])
+    #     #         is_top = False
+    #     #     node.build(target_dir=target_dir, is_top=is_top)
+
+
+    def export_all_source_trees(self, unit_indents=2, fout=sys.stdout, verbose=False):
+        """
+        :type unit_indents: int
+        :type fout: file-like object
+        :type verbose: bool
+        ----
+        Show content of all top nodes. In normal mode the output is equivalent
+        to input source tree file. In verbose mode the output is appended with
+        scope and target file name.
+        """
+        for top_node in self.top_nodes:
+            top_node.export_source_tree(unit_indents=unit_indents,
+                                        fout=fout,
+                                        verbose=verbose)
 
 
     @staticmethod
@@ -576,10 +658,10 @@ class SourceTreeTestCase(unittest.TestCase):
         """
         print()
         for i in count(start=1, step=1):
-            input_file = 'test/split.{}.source_tree.txt'.format(i)
+            input_file = 'test/split.source_tree.txt'
             input_spt_file = 'test/split.{}.separators.txt'.format(i)
             ref_file = 'test/split.{}.ref.txt'.format(i)
-            if not isfile(input_file):
+            if not isfile(ref_file):
                 break
             print('Unittest on {} ... '.format(input_file))
             fout = io.StringIO()
@@ -587,12 +669,43 @@ class SourceTreeTestCase(unittest.TestCase):
             flow = Flow(source_tree_file=input_file,
                         separator_file=input_spt_file)
             flow.split_all()
-            for top_node in flow.top_nodes:
-                top_node.export_source_tree(fout=fout)
+            flow.export_all_source_trees(fout=fout)
             content_out = fout.getvalue()
             content_ref = ref_fid.read()
             if content_out != content_ref:
                 open("split.{}.out.txt".format(i), 'w').write(content_out)
+            self.assertEqual(content_out, content_ref)
+            # self.assertEqual(fout.getvalue(), ref_fid.read())
+            ref_fid.close()
+            print('PASS')
+
+
+    def test_verbose_split(self):
+        """
+        Test if Node.split works correctly.
+        """
+        print()
+        for i in count(start=1, step=1):
+            input_file = 'test/split.source_tree.txt'
+            input_spt_file = 'test/split.{}.separators.txt'.format(i)
+            input_map_file = 'test/split.mapping.txt'
+            ref_file = 'test/split.{}.verbose.ref.txt'.format(i)
+            if not isfile(ref_file):
+                break
+            print('Unittest on {} in verbose mode ... '.format(input_file))
+            fout = io.StringIO()
+            ref_fid = open(ref_file)
+            flow = Flow(source_tree_file=input_file,
+                        separator_file=input_spt_file,
+                        mapping_file=input_map_file)
+            flow.split_all()
+            flow.set_target_dir_all('')
+            flow.export_all_source_trees(fout=fout, verbose=True)
+            content_out = fout.getvalue()
+            content_ref = ref_fid.read()
+            if content_out != content_ref:
+                open("split.{}.verbose.out.txt".format(i), 'w').write(
+                    content_out)
             self.assertEqual(content_out, content_ref)
             # self.assertEqual(fout.getvalue(), ref_fid.read())
             ref_fid.close()
