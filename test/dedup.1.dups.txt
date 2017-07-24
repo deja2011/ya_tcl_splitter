@@ -1,1 +1,1 @@
-/Users/lawrenceli/Workplace/tcl_splitter/test/source_2.tcl
+/remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_2.tcl
