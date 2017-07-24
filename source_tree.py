@@ -12,7 +12,7 @@ import io
 from os import makedirs
 from os.path import basename, dirname, isfile, isdir
 from os.path import join as opjoin
-
+import linecache
 import unittest
 from itertools import count
 
@@ -173,17 +173,6 @@ class Node(object):
         return target_file
 
 
-    # def add_child(self, orig_file, start=0, end=0, line_num=0):
-    #     """
-    #     Create child script node and link to parent node.
-    #     """
-    #     child = Node(orig_file=orig_file, parent=self, line_num=line_num)
-    #     child.scope = [start, end]
-    #     self.childs.append((line_num, child))
-    #     print("added child {} to {}".format(child, self))
-    #     return child
-
-
     def add_child_node(self, child_node, line_num, prepend=False):
         """
         Add an existing node to current node's childs.
@@ -307,7 +296,7 @@ class Node(object):
         # Implement left node, link left node and left child node.
         left_node = Node(orig_file=self.orig_file)
         left_node.stage = last_stage
-        left_node.scope = [self.scope[0], line_num]
+        left_node.scope = [self.scope[0], line_num + self.scope[0] -1]
         left_node.childs = [t for t in self.childs if t[0] < line_num]
         left_node.first_line = self.first_line
         for _, child_node in left_node.childs:
@@ -321,7 +310,7 @@ class Node(object):
         # Implement right node, link right node and right child node.
         right_node = Node(orig_file=self.orig_file)
         right_node.stage = next_stage
-        right_node.scope = [line_num, self.scope[1]]
+        right_node.scope = [line_num + self.scope[0] - 1, self.scope[1]]
         right_node.childs = [(t[0] - (line_num - 1), t[1]) for t in self.childs
                              if t[0] > line_num]
         right_node.last_line = self.last_line
@@ -359,59 +348,29 @@ class Node(object):
                 self.orig_file))
 
 
-
-    # def split(self, last_stage, next_stage, line_num,
-    #           left_child, right_child):
-    #     """
-    #     :type last_stage: string
-    #     :type next_stage: string
-    #     :type line_num: int
-    #     :type left_child: Node
-    #     :type right_child: Node
-    #     :rtype left_node: Node
-    #     :rtype right_node: Node
-    #     ----
-    #     Split node according to an input separator plus the split nodes from
-    #     lower layer. Return the two new nodes after splitting.
-    #     """
-    #     # Implement left node, link left node and left child node.
-    #     left_node = Node(orig_file=self.orig_file)
-    #     left_node.stage = last_stage
-    #     left_node.scope = [self.scope[0], line_num]
-    #     left_node.childs = [t for t in self.childs if t[0] < line_num]
-    #     for _, child_node in left_node.childs:
-    #         child_node.parent = left_node
-    #     if left_child:
-    #         left_node.add_child_node(left_child)
-    #     # Implement right node, link right node and right child node.
-    #     right_node = Node(orig_file=self.orig_file)
-    #     right_node.stage = next_stage
-    #     right_node.scope = [line_num, self.scope[1]]
-    #     right_node.childs = [(t[0] - line_num + 1, t[1]) for t in self.childs
-    #                          if t[0] > line_num]
-    #     for _, child_node in right_node.childs:
-    #         child_node.parent = right_node
-    #         child_node.line_num -= (line_num - 1)
-    #     if right_child:
-    #         right_node.add_child_node(right_child)
-    #     # Return left child and right child
-    #     return left_node, right_node
-
-
-    def build(self, target_dir, is_top=False):
+    def build(self):
         """
         Build script in target directory.
         ----
         :type target_dir: path
         """
-        makedirs(target_dir, exist_ok=True)
-        lines = open(self.orig_file).read().splitlines()
-        if is_top:
-            print("Export top node {}.".format(self))
-            target_file = opjoin(target_dir, '{}.tcl'.format(self.stage))
+        makedirs(self.target_dir, exist_ok=True)
+        # lines = open(self.orig_file).read().splitlines()
+        fout = open(self.target_file, 'a')
+        if self.first_line == "SOURCE":
+            fout.write("source -echo -verbose {}\n".format(
+                self.childs[0][1]))
+        elif self.first_line.startswith("SPLIT"):
+            fout.write("##PRS-STAGE-BEGIN: {}\n".format(
+                self.first_line.split()[2]))
+        elif self.first_line.startswith("ORIG"):
+            fout.write(linecache.get_line(self.orig_file,
+                                          self.scope[0]))
         else:
-            target_file = opjoin(target_dir, basename(self.target_file))
-        fout = open(target_file, 'a')
+            raise ValueError("Internal error."
+                             "Unexpected value of Node.first_line.")
+
+
         fout.write('\n'.join(lines[self.scope[0]-1 : self.scope[1]-1]))
         fout.close()
 
@@ -529,24 +488,15 @@ class Flow(object):
             node.set_target_dir(mapping=self.mapping, output_dir=output_dir)
 
 
-    # def build(self, output_dir):
-    #     """
-    #     :type output_dir: path
-    #     """
-    #     if isdir(output_dir):
-    #         raise OSError("Output directory {} already exists.".format(
-    #             output_dir))
-    #     # for node in self.iter_dfs():
-    #     #     if node.orig_file == "__VIRTUAL_TOP__":
-    #     #         continue
-    #     #     elif node.orig_file == self.root.childs[0][1].orig_file:
-    #     #         target_dir = opjoin(output_dir, 'CONSTRAINT')
-    #     #         is_top = True
-    #     #     else:
-    #     #         target_dir = opjoin(output_dir,
-    #     #                             self.mapping[dirname(node.orig_file)])
-    #     #         is_top = False
-    #     #     node.build(target_dir=target_dir, is_top=is_top)
+    def build(self, output_dir):
+        """
+        :type output_dir: path
+        """
+        if isdir(output_dir):
+            raise OSError("Output directory {} already exists.".format(
+                output_dir))
+        for node in self.iter_dfs_all():
+            node.build()
 
 
     def export_all_source_trees(self, unit_indents=2, fout=sys.stdout, verbose=False):
@@ -654,7 +604,7 @@ class SourceTreeTestCase(unittest.TestCase):
 
     def test_split(self):
         """
-        Test if Node.split works correctly.
+        Test if Flow.split works correctly.
         """
         print()
         for i in count(start=1, step=1):
@@ -663,7 +613,7 @@ class SourceTreeTestCase(unittest.TestCase):
             ref_file = 'test/split.{}.ref.txt'.format(i)
             if not isfile(ref_file):
                 break
-            print('Unittest on {} ... '.format(input_file))
+            print('Unittest on {} ... '.format(input_spt_file))
             fout = io.StringIO()
             ref_fid = open(ref_file)
             flow = Flow(source_tree_file=input_file,
@@ -682,7 +632,7 @@ class SourceTreeTestCase(unittest.TestCase):
 
     def test_verbose_split(self):
         """
-        Test if Node.split works correctly.
+        Test if Flow.split works correctly.
         """
         print()
         for i in count(start=1, step=1):
@@ -692,7 +642,7 @@ class SourceTreeTestCase(unittest.TestCase):
             ref_file = 'test/split.{}.verbose.ref.txt'.format(i)
             if not isfile(ref_file):
                 break
-            print('Unittest on {} in verbose mode ... '.format(input_file))
+            print('Unittest on {} in verbose mode ... '.format(input_spt_file))
             fout = io.StringIO()
             ref_fid = open(ref_file)
             flow = Flow(source_tree_file=input_file,
@@ -710,6 +660,12 @@ class SourceTreeTestCase(unittest.TestCase):
             # self.assertEqual(fout.getvalue(), ref_fid.read())
             ref_fid.close()
             print('PASS')
+
+
+    def test_build(self):
+        """
+        Test if Flow.build works correctly.
+        """
 
 
 if __name__ == "__main__":

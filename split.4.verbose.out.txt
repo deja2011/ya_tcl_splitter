@@ -1,0 +1,39 @@
+CONSTRAINT/scripts/source_1.setup.tcl
+-> orig file : /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.tcl
+-> scope : [1, 10]
+-> first line : ORIG
+-> last line : SOURCE
+----------------
+  CONSTRAINT/scripts/source_2.setup.tcl
+  -> sourced at : 10
+  -> orig file : /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_2.tcl
+  -> scope : [1, 654]
+  -> first line : ORIG
+  -> last line : SPLIT setup rtlscr
+----------------
+CONSTRAINT/scripts/source_1.rtlscr.tcl
+-> orig file : /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.tcl
+-> scope : [10, 11]
+-> first line : SOURCE
+-> last line : SPLIT rtlscr cstr
+----------------
+  CONSTRAINT/scripts/source_2.rtlscr.tcl
+  -> sourced at : 1
+  -> orig file : /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_2.tcl
+  -> scope : [654, 674]
+  -> first line : SPLIT setup rtlscr
+  -> last line : ORIG
+----------------
+CONSTRAINT/scripts/source_1.cstr.tcl
+-> orig file : /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.tcl
+-> scope : [11, 32]
+-> first line : SPLIT rtlscr cstr
+-> last line : ORIG
+----------------
+  CONSTRAINT/scripts/source_3.tcl
+  -> sourced at : 9
+  -> orig file : /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_3.tcl
+  -> scope : [1, 801]
+  -> first line : ORIG
+  -> last line : ORIG
+----------------
