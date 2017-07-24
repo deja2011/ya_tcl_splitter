@@ -1,8 +1,8 @@
-/remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.setup.tcl
-10 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_2.setup.tcl
-/remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.rtlscr.tcl
-1 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_2.rtlscr.tcl
-/remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.cstr.tcl
-9 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_3.cstr.tcl
-/remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.pcstr.tcl
-1 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_3.pcstr.tcl
+/Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.setup.tcl
+10 /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_2.setup.tcl
+/Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.rtlscr.tcl
+1 /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_2.rtlscr.tcl
+/Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.cstr.tcl
+9 /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_3.cstr.tcl
+/Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.pcstr.tcl
+1 /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_3.pcstr.tcl

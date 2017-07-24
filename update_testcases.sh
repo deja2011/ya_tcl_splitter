@@ -1,6 +1,6 @@
 #!/bin/sh -xf
 
-pat=$(dirname $(head -n 1 "test/split.1.source_tree.txt"))
+pat=$(dirname $(head -n 1 "test/split.source_tree.txt"))
 repl="$(pwd)/test"
 echo $pat
 echo $repl

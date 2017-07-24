@@ -1,1 +1,1 @@
-rtlscr cstr 20 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.tcl
+rtlscr cstr 20 /Users/lawrenceli/Workplace/ya_tcl_splitter/test/source_1.tcl
