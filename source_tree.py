@@ -136,6 +136,7 @@ class Node(object):
         self.childs = list()
         self._stage = None
         self.target_dir = ''
+        self.rel_dir = ''
         self.first_line = "ORIG"
         self.last_line = "ORIG"
 
@@ -171,6 +172,24 @@ class Node(object):
         if self.target_dir:
             target_file = opjoin(self.target_dir, basename(target_file))
         return target_file
+
+
+    @property
+    def rel_file(self):
+        """
+        Query command of relative file name. Relative file name is used when
+        rendering script names in source commands.
+        """
+        if self.stage:
+            segments = basename(self.orig_file).split(".")
+            segments.insert(-1, self.stage)
+            rel_file = opjoin(dirname(self.orig_file), ".".join(segments))
+        else:
+            rel_file = self.orig_file
+        if self.target_dir:
+            rel_file = opjoin(self.rel_dir, basename(rel_file))
+        return rel_file
+
 
 
     def add_child_node(self, child_node, line_num, prepend=False):
@@ -341,8 +360,8 @@ class Node(object):
         Set Node.target_dir according to selr.orig_file and mapping.
         """
         try:
-            self.target_dir = opjoin(output_dir,
-                                     mapping[dirname(self.orig_file)])
+            self.rel_dir = mapping[dirname(self.orig_file)]
+            self.target_dir = opjoin(output_dir, self.rel_dir)
         except KeyError:
             raise KeyError("Cannot find entry for {} in mapping file.".format(
                 self.orig_file))
@@ -357,22 +376,37 @@ class Node(object):
         makedirs(self.target_dir, exist_ok=True)
         # lines = open(self.orig_file).read().splitlines()
         fout = open(self.target_file, 'a')
+        # Write first line according to Node.first_line
         if self.first_line == "SOURCE":
             fout.write("source -echo -verbose {}\n".format(
-                self.childs[0][1]))
+                self.childs[0][1].rel_file))
         elif self.first_line.startswith("SPLIT"):
             fout.write("##PRS-STAGE-BEGIN: {}\n".format(
                 self.first_line.split()[2]))
-        elif self.first_line.startswith("ORIG"):
-            fout.write(linecache.get_line(self.orig_file,
-                                          self.scope[0]))
+        elif self.first_line == "ORIG":
+            fout.write(linecache.getline(self.orig_file,
+                                         self.scope[0]))
         else:
             raise ValueError("Internal error."
                              "Unexpected value of Node.first_line.")
-
-
-        fout.write('\n'.join(lines[self.scope[0]-1 : self.scope[1]-1]))
+        # Write lines in middle.
+        for i in range(self.scope[0]+1, self.scope[1]):
+            fout.write(linecache.getline(self.orig_file, i))
+        # Write last line according to Node.last_line
+        if self.last_line == "SOURCE":
+            fout.write("source -echo -verbose {}\n".format(
+                self.childs[-1][1].rel_file))
+        elif self.last_line.startswith("SPLIT"):
+            fout.write("##PRS-STAGE-END: {}\n".format(
+                self.last_line.split()[1]))
+        elif self.last_line == "ORIG":
+            fout.write(linecache.getline(self.orig_file,
+                                         self.scope[1]))
+        else:
+            raise ValueError("Internal error."
+                             "Unexpected value of Node.last_line.")
         fout.close()
+        linecache.clearcache()
 
 
     def __repr__(self):
@@ -488,13 +522,14 @@ class Flow(object):
             node.set_target_dir(mapping=self.mapping, output_dir=output_dir)
 
 
-    def build(self, output_dir):
+    def build_all(self, output_dir):
         """
         :type output_dir: path
         """
         if isdir(output_dir):
             raise OSError("Output directory {} already exists.".format(
                 output_dir))
+        self.set_target_dir_all(output_dir)
         for node in self.iter_dfs_all():
             node.build()
 
@@ -662,11 +697,23 @@ class SourceTreeTestCase(unittest.TestCase):
             print('PASS')
 
 
-    def test_build(self):
-        """
-        Test if Flow.build works correctly.
-        """
+def manual_test_build(output_dir="export"):
+    """
+    Test if Flow.build works correctly.
+    """
+    if isdir(output_dir):
+        import shutil
+        shutil.rmtree(output_dir)
+    input_tree_file = 'test/split.source_tree.txt'
+    input_spt_file = 'test/split.5.separators.txt'
+    input_map_file = 'test/split.mapping.txt'
+    flow = Flow(source_tree_file=input_tree_file,
+                separator_file=input_spt_file,
+                mapping_file=input_map_file)
+    flow.split_all()
+    flow.build_all(output_dir)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    manual_test_build()
