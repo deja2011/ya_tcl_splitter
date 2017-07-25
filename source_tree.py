@@ -15,6 +15,7 @@ from os.path import join as opjoin
 import linecache
 import unittest
 from itertools import count
+import shutil
 
 import settings
 
@@ -534,6 +535,25 @@ class Flow(object):
             node.build()
 
 
+    def move_top_scripts(self, output_dir):
+        """
+        Move top scripts from unified location (output_dir + mapping) to
+        designated location.
+        """
+        for top_node in self.top_nodes:
+            src = top_node.target_file
+            dst = opjoin(output_dir, top_node.stage+".tcl")
+            print("moving {} to {}.".format(src, dst))
+            if not isfile(src):
+                raise OSError("File {} does not exist.".format(src))
+            if not isdir(output_dir):
+                raise OSError("Output directory {} does not exist.".format(
+                    output_dir))
+            if isfile(dst):
+                raise OSError("File {} already exists.".format(dst))
+            shutil.move(src, dst)
+
+
     def export_all_source_trees(self, unit_indents=2, fout=sys.stdout, verbose=False):
         """
         :type unit_indents: int
@@ -702,7 +722,6 @@ def manual_test_build(output_dir="export"):
     Test if Flow.build works correctly.
     """
     if isdir(output_dir):
-        import shutil
         shutil.rmtree(output_dir)
     input_tree_file = 'test/split.source_tree.txt'
     input_spt_file = 'test/split.5.separators.txt'
@@ -712,6 +731,8 @@ def manual_test_build(output_dir="export"):
                 mapping_file=input_map_file)
     flow.split_all()
     flow.build_all(output_dir)
+    print("build completed.")
+    flow.move_top_scripts(output_dir)
 
 
 if __name__ == "__main__":
