@@ -7,21 +7,24 @@ Build PRS directory from run directory of original testcase, with prelude enable
 
 
 import argparse
-# import logging
-# import os
-import sys
+from os.path import is_dir
+import shutil
 
 from source_tree import Flow
 
 
-def build_dir(args):
+def split_scripts(source_tree_file, separator_file, mapping_file, output_dir, force=False):
     """
-    Build PRS design directory.
+    Split Tcl scripts and export to designated directory.
     """
-    flow = Flow(source_tree_file=args.source_tree,
-                separator_file=args.separators,
-                mapping_file=args.mapping)
-    flow.build(args.output)
+    if is_dir(output_dir) and force:
+        shutil.rmtree(output_dir)
+    flow = Flow(source_tree_file=source_tree_file,
+                separator_file=separator_file,
+                mapping_file=mapping_file)
+    flow.split_all()
+    flow.build_all(output_dir)
+    flow.move_top_scripts(output_dir)
 
 
 def main(*args):
@@ -45,13 +48,13 @@ def main(*args):
                         required=True)
     parser.add_argument('-f', '--force', action='store_true',
                         help="force to remove output directory if it exists.")
-    parser.add_argument('--suffix', default="CONSTRAINT/scripts",
-                        help="relative path to non-PRS-interfaced scripts."
-                        "Defaults to CONSTRAINT/scripts.")
-    parser.set_defaults(func=build_dir)
     args = parser.parse_args()
-    args.func(args)
+    split_scripts(source_tree_file=args.source_tree,
+                  separator_file=args.separators,
+                  mapping_file=args.mapping,
+                  output_dir=args.output,
+                  force=args.force)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

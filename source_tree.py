@@ -7,7 +7,6 @@ Data structure of script source tree.
 
 import re
 import sys
-# import os
 import io
 from os import makedirs
 from os.path import basename, dirname, isfile, isdir
@@ -16,6 +15,7 @@ import linecache
 import unittest
 from itertools import count
 import shutil
+import subprocess
 
 import settings
 
@@ -543,7 +543,6 @@ class Flow(object):
         for top_node in self.top_nodes:
             src = top_node.target_file
             dst = opjoin(output_dir, top_node.stage+".tcl")
-            print("moving {} to {}.".format(src, dst))
             if not isfile(src):
                 raise OSError("File {} does not exist.".format(src))
             if not isdir(output_dir):
@@ -717,24 +716,30 @@ class SourceTreeTestCase(unittest.TestCase):
             print('PASS')
 
 
-def manual_test_build(output_dir="export"):
-    """
-    Test if Flow.build works correctly.
-    """
-    if isdir(output_dir):
+    def test_build(self):
+        """
+        Test if Flow.build works correctly.
+        """
+        print()
+        print('Unittest on test/export ... ')
+        output_dir = "export"
+        if isdir(output_dir):
+            shutil.rmtree(output_dir)
+        input_tree_file = "test/split.source_tree.txt"
+        input_spt_file = "test/split.5.separators.txt"
+        input_map_file = "test/split.mapping.txt"
+        flow = Flow(source_tree_file=input_tree_file,
+                    separator_file=input_spt_file,
+                    mapping_file=input_map_file)
+        flow.split_all()
+        flow.build_all(output_dir)
+        flow.move_top_scripts(output_dir)
+        process = subprocess.run(['diff', '-r', output_dir, 'test/export'])
+        self.assertEqual(process.returncode, 0)
         shutil.rmtree(output_dir)
-    input_tree_file = 'test/split.source_tree.txt'
-    input_spt_file = 'test/split.5.separators.txt'
-    input_map_file = 'test/split.mapping.txt'
-    flow = Flow(source_tree_file=input_tree_file,
-                separator_file=input_spt_file,
-                mapping_file=input_map_file)
-    flow.split_all()
-    flow.build_all(output_dir)
-    print("build completed.")
-    flow.move_top_scripts(output_dir)
+        print('PASS')
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    manual_test_build()
+    unittest.main()
+    # manual_test_build()
