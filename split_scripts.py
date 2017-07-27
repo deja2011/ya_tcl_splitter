@@ -7,7 +7,7 @@ Build PRS directory from run directory of original testcase, with prelude enable
 
 
 import argparse
-from os.path import is_dir
+from os.path import isdir
 import shutil
 
 from source_tree import Flow
@@ -17,7 +17,7 @@ def split_scripts(source_tree_file, separator_file, mapping_file, output_dir, fo
     """
     Split Tcl scripts and export to designated directory.
     """
-    if is_dir(output_dir) and force:
+    if isdir(output_dir) and force:
         shutil.rmtree(output_dir)
     flow = Flow(source_tree_file=source_tree_file,
                 separator_file=separator_file,
@@ -27,7 +27,7 @@ def split_scripts(source_tree_file, separator_file, mapping_file, output_dir, fo
     flow.move_top_scripts(output_dir)
 
 
-def main(*args):
+def main():
     """
     main function for argument parsing.
     """
