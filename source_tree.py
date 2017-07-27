@@ -234,6 +234,7 @@ class Node(object):
                                                 line_num=line_num)
                 elif current_indents == indents:
                     current_node = current_node.parent
+                    current_indents -= 1
                     current_node.add_child_node(Node(orig_file=file_name),
                                                 line_num=line_num)
                 else:
