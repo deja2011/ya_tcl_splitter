@@ -2,7 +2,7 @@
 # coding=utf-8
 
 """
-Build PRS directory from run directory of original testcase, with prelude enabled.
+Split a batch of Tcl scripts.
 """
 
 
