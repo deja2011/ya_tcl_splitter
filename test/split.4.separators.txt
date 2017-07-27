@@ -1,0 +1,2 @@
+setup rtlscr 654 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_2.tcl
+rtlscr cstr 20 /remote/us01home41/zcli/desport/ya_tcl_splitter/test/source_1.tcl
