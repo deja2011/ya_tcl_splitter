@@ -335,6 +335,7 @@ class Node(object):
         else:
             left_node.last_line = "SPLIT {} {}".format(last_stage,
                                                        next_stage)
+
         # Implement right node, link right node and right child node.
         right_node = Node(orig_file=self.orig_file)
         right_node.stage = next_stage
@@ -351,6 +352,7 @@ class Node(object):
         else:
             right_node.first_line = "SPLIT {} {}".format(last_stage,
                                                          next_stage)
+
         # Recursively split parent node unless current node is the top one.
         if self.parent:
             return self.parent.split_bot_up(last_stage=last_stage,
@@ -383,8 +385,8 @@ class Node(object):
         :type target_dir: path
         """
         makedirs(self.target_dir, exist_ok=True)
-        # lines = open(self.orig_file).read().splitlines()
         fout = open(self.target_file, 'a')
+
         # Write first line according to Node.first_line
         if self.first_line == "SOURCE":
             fout.write("source -echo -verbose {}\n".format(
@@ -398,9 +400,23 @@ class Node(object):
         else:
             raise ValueError("Internal error."
                              "Unexpected value of Node.first_line.")
+
         # Write lines in middle.
         for i in range(self.scope[0]+1, self.scope[1]):
-            fout.write(linecache.getline(self.orig_file, i))
+            line = linecache.getline(self.orig_file, i)
+            all_sourced = [t[1] for t in self.childs if t[0] == (i-self.scope[0])]
+            if not all_sourced:
+                fout.write(line)
+            elif len(all_sourced) == 1:
+                fout.write(re.sub(
+                    r"source[^;\n]*",
+                    "source -echo -verbose {}".format(all_sourced[0].rel_file),
+                    line))
+            else:
+                for sourced in all_sourced:
+                    fout.write("source -echo -verbose {}\n".format(
+                        sourced.rel_file))
+
         # Write last line according to Node.last_line
         if self.last_line == "SOURCE":
             fout.write("source -echo -verbose {}\n".format(
@@ -552,7 +568,7 @@ class Flow(object):
             src = top_node.target_file
             dst = opjoin(output_dir, top_node.stage+".tcl")
             if not isfile(src):
-                raise OSError("File {} does not exist.".format(src))
+                continue
             if not isdir(output_dir):
                 raise OSError("Output directory {} does not exist.".format(
                     output_dir))
@@ -687,7 +703,6 @@ class SourceTreeTestCase(unittest.TestCase):
             if content_out != content_ref:
                 open("split.{}.out.txt".format(i), 'w').write(content_out)
             self.assertEqual(content_out, content_ref)
-            # self.assertEqual(fout.getvalue(), ref_fid.read())
             ref_fid.close()
             print('PASS')
 
@@ -719,7 +734,6 @@ class SourceTreeTestCase(unittest.TestCase):
                 open("split.{}.verbose.out.txt".format(i), 'w').write(
                     content_out)
             self.assertEqual(content_out, content_ref)
-            # self.assertEqual(fout.getvalue(), ref_fid.read())
             ref_fid.close()
             print('PASS')
 
@@ -750,4 +764,3 @@ class SourceTreeTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # manual_test_build()
