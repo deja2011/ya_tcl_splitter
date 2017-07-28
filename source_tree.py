@@ -120,6 +120,13 @@ class Separator(object):
         self._file_name = value
 
 
+    def __repr__(self):
+        return "<Separator {} {} {}>".format(self.line_num,
+                                             self.last_stage,
+                                             self.next_stage,
+                                             self.file_name)
+
+
 
 class Node(object):
     """
@@ -245,7 +252,7 @@ class Node(object):
                     current_indents = indents - 1
 
 
-    def iter_dfs(self):
+    def dfs(self):
         """
         A Depth-First-Search to iterate all nodes from self.
         Child nodes are ordered by the order in parent node's childs list.
@@ -435,12 +442,12 @@ class Flow(object):
             self.mapping = self.load_mapping(mapping_file)
 
 
-    def iter_dfs_all(self):
+    def dfs_all(self):
         """
-        Loop over all top nodes and apply Node.iter_dfs on each of them.
+        Loop over all top nodes and apply Node.dfs on each of them.
         """
         for top_node in self.top_nodes:
-            for node in top_node.iter_dfs():
+            for node in top_node.dfs():
                 yield node
 
 
@@ -461,7 +468,7 @@ class Flow(object):
             raise ValueError("Invalid separator location: Separator in {} is"
                              "not supported because this script is sourced more"
                              "than once in the flow")
-        matching_nodes = [n for n in self.iter_dfs_all()
+        matching_nodes = [n for n in self.dfs_all()
                           if n.orig_file == separator.file_name and
                           n.stage in (separator.last_stage, None)]
         node = matching_nodes[-1]
@@ -501,7 +508,7 @@ class Flow(object):
         """
         all_scripts = list()
         self.duplicates = list()
-        for node in self.iter_dfs_all():
+        for node in self.dfs_all():
             if node.orig_file not in all_scripts:
                 all_scripts.append(node.orig_file)
             else:
@@ -520,7 +527,7 @@ class Flow(object):
         Iterate over all top nodes and their child nodes, set their target_dir
         according to orig_file, output_dir, and mapping.
         """
-        for node in self.iter_dfs_all():
+        for node in self.dfs_all():
             node.set_target_dir(mapping=self.mapping, output_dir=output_dir)
 
 
@@ -532,7 +539,7 @@ class Flow(object):
             raise OSError("Output directory {} already exists.".format(
                 output_dir))
         self.set_target_dir_all(output_dir)
-        for node in self.iter_dfs_all():
+        for node in self.dfs_all():
             node.build()
 
 
